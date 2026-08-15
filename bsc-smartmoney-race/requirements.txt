@@ -1,9 +1,0 @@
-numpy>=1.26
-pandas>=2.0
-requests>=2.31      # Bitquery / Dune HTTP
-PyYAML>=6.0         # 可选：读取 yaml 配置
-
-# 实时层与自建索引按需安装：
-# websockets>=12     # Bitquery WSS 订阅（~1s）
-# grpcio>=1.60       # Bitquery CoreCast gRPC（~300ms，自助档最快通道）
-# web3>=6.0          # 自建 RPC + eth_getLogs
