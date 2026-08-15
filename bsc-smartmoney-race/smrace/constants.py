@@ -1,7 +1,9 @@
 """BSC 链上常量：合约地址、事件签名、报价资产、桥/CEX 白名单。
 
-⚠️ 上线前必须用一笔真实交易的 receipt 核对 topic0。ABI 来自 PancakeSwap 官方仓库，
-topic0 为本地 keccak 计算（见 docs/01-架构与数据源选型.md 的「未验证项」清单）。
+✅ topic0 已于 2026-08-15 用真实链上日志核对（Bitquery Events 的 SignatureHash）：
+pancake_v3_swap 与 infinity_cl_swap 均逐字节一致，后者直接取自
+INFINITY_CL_POOL_MANAGER 发出的 Swap 事件。Infinity Bin 池的 Swap ABI 仍未拿到，
+TOPIC0 里也尚无对应条目（见 docs/01 未验证项清单）。
 """
 
 from __future__ import annotations
