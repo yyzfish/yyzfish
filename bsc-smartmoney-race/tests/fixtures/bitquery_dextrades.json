@@ -1,0 +1,74 @@
+{
+  "_note": "形状对照样本。字段名以 Bitquery 官方文档为准，上线前用 `smrace.cli probe` 拉真数据核对。",
+  "data": {
+    "EVM": {
+      "DEXTrades": [
+        {
+          "Block": { "Number": "50000000", "Time": "2026-08-01T00:00:00Z" },
+          "Transaction": {
+            "Hash": "0xaaa1",
+            "From": "0x1111111111111111111111111111111111111111",
+            "Gas": "180000",
+            "GasPrice": "1"
+          },
+          "Log": { "Index": "12" },
+          "Trade": {
+            "Dex": {
+              "ProtocolName": "pancake_swap",
+              "ProtocolVersion": "v3",
+              "SmartContract": "0xpool0000000000000000000000000000000000aa"
+            },
+            "Buy": {
+              "Amount": "1000000",
+              "AmountInUSD": "500",
+              "Buyer": "0x1b81d678ffb9c0263b24a97847620c99d213eb14",
+              "Currency": { "SmartContract": "0xMEME00000000000000000000000000000000BEEF", "Symbol": "MEME", "Decimals": 18 }
+            },
+            "Sell": {
+              "Amount": "0.8333333",
+              "AmountInUSD": "500",
+              "Seller": "0x1b81d678ffb9c0263b24a97847620c99d213eb14",
+              "Currency": { "SmartContract": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c", "Symbol": "WBNB", "Decimals": 18 }
+            }
+          }
+        },
+        {
+          "Block": { "Number": "50000100", "Time": "2026-08-01T00:01:00Z" },
+          "Transaction": {
+            "Hash": "0xaaa2",
+            "From": "0x2222222222222222222222222222222222222222",
+            "Gas": "150000",
+            "GasPrice": "1"
+          },
+          "Log": { "Index": "3" },
+          "Trade": {
+            "Dex": { "ProtocolName": "pancake_swap", "ProtocolVersion": "v2", "SmartContract": "0xpool0000000000000000000000000000000000bb" },
+            "Buy": {
+              "Amount": "1200",
+              "AmountInUSD": "1200",
+              "Buyer": "0x2222222222222222222222222222222222222222",
+              "Currency": { "SmartContract": "0x55d398326f99059ff775485246999027b3197955", "Symbol": "USDT", "Decimals": 18 }
+            },
+            "Sell": {
+              "Amount": "2000000",
+              "AmountInUSD": "1200",
+              "Seller": "0x2222222222222222222222222222222222222222",
+              "Currency": { "SmartContract": "0xMEME00000000000000000000000000000000BEEF", "Symbol": "MEME", "Decimals": 18 }
+            }
+          }
+        },
+        {
+          "_case": "两边都是报价资产的套利腿，必须被跳过",
+          "Block": { "Number": "50000200", "Time": "2026-08-01T00:02:00Z" },
+          "Transaction": { "Hash": "0xaaa3", "From": "0x3333333333333333333333333333333333333333", "Gas": "120000", "GasPrice": "1" },
+          "Log": { "Index": "1" },
+          "Trade": {
+            "Dex": { "ProtocolName": "pancake_swap", "ProtocolVersion": "v3", "SmartContract": "0xpoolcc" },
+            "Buy": { "Amount": "600", "AmountInUSD": "600", "Buyer": "0x33", "Currency": { "SmartContract": "0x55d398326f99059ff775485246999027b3197955", "Symbol": "USDT" } },
+            "Sell": { "Amount": "1", "AmountInUSD": "600", "Seller": "0x33", "Currency": { "SmartContract": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c", "Symbol": "WBNB" } }
+          }
+        }
+      ]
+    }
+  }
+}

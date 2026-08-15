@@ -1,0 +1,61 @@
+# 用法：python -m smrace.cli run -c config/config.example.yaml
+# 所有字段可省略，省略即用 smrace/config.py 里的默认值。
+
+data_source: synthetic        # synthetic | rpc | bitquery | dune
+lookback_days: 90
+out_dir: out
+seed: 42
+
+purify:
+  bundler_block_delta: 0          # 与建池同块建仓 → 绝对不可跟单，剔除
+  sniper_block_delta_max: 3       # 1~3 块内（≈1.35s）→ 分流到 sniper 赛道，不剔除
+  mev_hold_blocks_max: 1          # 中位持仓 < 1 块 → 三明治 MEV
+  flip_ratio_max: 50.0            # 等量买卖翻转比 > 50 → bump bot
+  wash_scc_occurrence: 100        # SCC 出现次数（Victor & Weintraud 阈值）
+  transfer_in_usd_ratio_max: 0.30 # transfer_in 占流入 > 30% → 成本基准不可信
+  min_trades: 20
+
+sybil:
+  funding_fanout_min: 5           # 同一地址向 ≥5 个地址转出近似数额 → 同簇
+  funding_amount_tol: 0.05
+  funding_window_sec: 3600
+  cooccur_jaccard_min: 0.60       # ⚠️ 区块共现必须与代币重合联合判定
+  cooccur_min_count: 5
+  token_jaccard_min: 0.70
+  enable_profit_sink: true        # 利润归集到同一地址 = 最强证据
+
+race:
+  window_hours: 24                # 一场比赛 = 代币 × 24h 窗口
+  max_windows_per_token: 3
+  min_participants: 5
+  draw_margin_ret: 0.05           # 与并列组组首差 < 5% 判平局
+  min_invested_usd: 50.0
+
+elo:
+  mu_init: 1500.0
+  sig_init: 350.0
+  beta: 200.0                     # 单场表现噪声
+  gamma: 40.0                     # 每期扩散 —— 对抗 alpha 衰减的机制
+  rho_history: 30                 # 保留的 logistic 历史项数
+  sig_floor: 40.0
+
+gate:
+  fdr_target: 0.10                # BHY 目标 FDR
+  dsr_as_gate: false              # ⚠️ 默认只诊断不拦截，理由见 docs/02 §5.4
+  dsr_min: 0.95
+  min_profit_factor: 1.2
+  min_races: 10
+  noise_floor_B: 200              # 置换检验标定噪音基准线的重采样次数
+  bootstrap_B: 2000               # cluster bootstrap（按代币分块）
+  bootstrap_alpha: 0.05
+  use_emax_sr_floor: true
+
+copy:
+  entry_lag_blocks: 3             # 看到领头者上链后 N 块才能进场
+  exit_lag_blocks: 3              # 出场同理 —— 你永远是他的对手方
+  position_usd: 500.0
+  taker_fee_bps: 25.0             # PancakeSwap V3 默认 0.25%
+  gas_usd_per_tx: 0.15
+  token_tax_bps: 0.0              # fee-on-transfer，建议按代币覆盖
+  min_pool_liquidity_usd: 50000.0
+  max_hold_filter_sec: 300        # 领头者持仓 < 5min → 判为跟不上
