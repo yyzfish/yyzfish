@@ -15,7 +15,8 @@ from smrace.models import Flow, FlowKind, RaceEntry, Side, TokenMeta, Trade
 from smrace.pnl.engine import compute_positions
 from smrace.race.engine import rank_entries
 from smrace.scoring.elo_mmr import EloMMR
-from smrace.scoring.gates import bhy_adjust, estimate_pi0, expected_max_sharpe, race_zscore
+from smrace.scoring.gates import (bhy_adjust, estimate_pi0, expected_max_sharpe,
+                                  permutation_noise_floor, race_zscore)
 
 
 def _t(block, wallet, token, side, base, quote_amt, li=0, gas=0.0, ok=True):
@@ -89,6 +90,15 @@ def test_bhy_is_monotone_and_bounded():
 def test_pi0_recovers_all_null_population():
     rng = np.random.default_rng(1)
     assert estimate_pi0(rng.random(20000)) > 0.95   # 全零 alpha → π₀ ≈ 1
+
+
+def test_noise_floor_tolerates_zero_race_entities():
+    """真实数据里有实体 0 场有效比赛（全部比赛参与人数不足）。
+    2026-08-15 首次真跑时它们让噪音基准线除零崩掉 —— 必须被静默剔除。"""
+    with_zeros = permutation_noise_floor([0, 0, 12, 30, 25], n_trials=5, B=50, seed=7)
+    without = permutation_noise_floor([12, 30, 25], n_trials=5, B=50, seed=7)
+    assert math.isfinite(with_zeros) and with_zeros == without, (with_zeros, without)
+    assert permutation_noise_floor([0, 0], n_trials=2, B=50) == 0.0
 
 
 def test_expected_max_sharpe_grows_with_trials():

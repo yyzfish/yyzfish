@@ -1,5 +1,8 @@
 # 本地接手提示词
 
+> **2026-08-15 更新：真实数据已跑通。** 本文档下述任务的完成情况见文末
+> 「真实数据首跑记录」，未完成项也在那里。原文保留作背景。
+
 > 把下面「提示词正文」整段贴给本地的 Claude Code（或任意能读写文件、能联网、能跑 shell 的 agent）。
 > 后半部分「附录」是给你自己看的，不用贴。
 
@@ -235,3 +238,72 @@ python tests/test_sql_parity.py && python -m smrace.cli validate
 3. `bootstrap` 小范围跑通（3 天 / Top200），确认账单口径
 4. `oos` 出结果 —— 这才是「这套东西到底有没有用」的答案
 5. 有余力再补：实时层、Four.meme 解码、Envio 适配器
+
+---
+
+# 真实数据首跑记录（2026-08-15）
+
+## 四个任务的结果
+
+**任务一 · probe / bootstrap ✅**
+- `probe --source bitquery`：10 分钟拉 41,029 笔、10,654 地址，三项检查全绿
+  （gas 中位 $0.031、最活跃地址 2.5%、venue 含 v2/v3/infinity/fourmeme）。
+- 本 Bitquery token 是低档套餐：无 archive（`combined` 会 403，适配器已自动降级
+  `realtime` 并告警）、限流 ~10 req/min（用 `BITQUERY_RPM=8` 压住）。
+- 本 Dune key **有 CRUD 权限**，bootstrap 全自动建 Query 可用，不需要手工贴 SQL。
+- `bootstrap --days 3 --max-tokens 200 --min-usd 500 --yes` 真跑成功：
+  111,917 行 ≈ 916 credits（免费额度 37%）。**7 天/Top800 要 28,334 credits，
+  免费档跑不动**；省钱的有效杠杆是 `--min-usd`（头部代币行数被零售小单主导，
+  砍 `--max-tokens` 几乎不省）。
+- 计费校准（`--bytes-per-row`）还没做：API 看不到扣费明细，需要登录
+  dune.com 后台对一次「实际扣除 ÷ 预估 906」。
+
+**任务二 · Dune SQL ✅**
+- `dune/leaderboard.sql` 在真实 Trino 上**零语法修复一次通过**（3 天/Top200，
+  medium 引擎 4s）。normal_cdf、裸 0x 字面量、params 交叉连接、窗口累积最小值
+  全部按预期工作。实测数字已回填 SQL 头部。
+- 真实结果：141 个 z>0 地址，5 人过 SQL 版闸门；Top4 中 3 个地址画像高度相似
+  （64 场/~590 笔/胜率 0.6），疑似同一人分身 —— 地址级缺陷的活例证。
+
+**任务三 · 白名单 ✅**
+- 桥 40 / CEX 热钱包 32 / MEV builder 48，全部来自官方部署文件或两份独立
+  BscScan 标签库交叉验证，出处写在 `constants.py` 注释里。
+- Bitget 无法核验到 BSC 标签地址，宁缺毋滥未收录。
+
+**任务四 · oos ✅（机制通，结论=不要跟单）**
+- 3 天窗口（1786547052~1786806252，缓存在 out/cache/）：训练期 0 人过闸门 ⇒
+  无可跟单对象；对照组 210 人测试期中位名次 z=-0.03（纯噪音）、失活率 81%。
+- 完整管线结果：424/10,447 实体过净化，置换噪音基准 z=3.52 >
+  观测最大 z=3.33，**0/260 过闸门**。π̂₀=0.864（估计 ~35 人有技能但个体
+  不可分辨）。这与文档预期一致：3 天窗口 + $500 单笔下限太薄，
+  想出结论至少要 7 天 + 更低 min_usd —— 那需要付费档或自建索引。
+
+## 未验证项清单的销账
+
+- [x] V3 / Infinity CL 的 topic0 —— 与链上真实日志逐字节一致（constants.py 已记）
+- [x] Dune 收录 Infinity —— `infinity_cl` + `infinity_lb` 都在 `dex.trades`，
+      **过滤 venue 用这两个 version 字符串**
+- [x] Bitquery GasPrice 单位 = **BNB**（实测 5e-11 = 0.05 gwei；默认已改）
+- [x] `erc20_bnb.evt_Transfer` 表名正确（非 bep20_bnb）
+- [x] normal_cdf 在 DuneSQL 可用
+- [ ] Dune Free 档 2,500 credits/月 —— 未在后台核对（API 看不到账单页）
+- [ ] `--bytes-per-row=420` 校准 —— 同上，要后台实际扣费数
+- [ ] Bitquery archive 计费/深度 —— 本 token 无 archive，问题变成「要不要买」
+- [ ] Infinity Bin 池 Swap ABI —— 仍缺
+
+## 本次修的接线 bug（都写了测试或有 loud 告警）
+
+1. Dune Query 参数化：原实现内联时间戳但 execute 传参 → 400；且换窗口复用
+   query_id 会**静默跑旧窗口**。现在建 Query 声明 `{{start_ts}}/{{end_ts}}`。
+2. `quote_list` 必须渲染成裸 0x 字面量：`dex.trades` 地址列是 varbinary，
+   带引号的 varchar 在 IN 里直接类型错误。
+3. Bitquery `DEXTrades` 混有 NFT 市场成交（实测 seaport）：一侧是 WBNB 的
+   NFT 单会被记成 memecoin 买入。已按 `NFT_MARKETPLACE_PROTOCOLS` 前缀过滤。
+4. `permutation_noise_floor` 对 0 场次实体除零崩溃（真实数据才会出现）。
+   已剔除并加测试 `test_noise_floor_tolerates_zero_race_entities`。
+
+## 剩余未实现（与交接时相同）
+
+- `DuneSource.fetch_flows` / `fetch_tokens`（转账流、建池事件）—— loader 会
+  响亮降级：cost_coverage 恒 1.0、launch_block 用首笔成交近似
+- 实时层 `stream()`、Four.meme 曲线阶段解码、Envio 适配器

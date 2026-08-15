@@ -188,9 +188,11 @@ def permutation_noise_floor(
     「我榜首那个 z=8.5 的人，在纯运气世界里有多常见」。
     """
     rng = np.random.default_rng(seed)
-    if not n_per_entity:
+    # 真实数据里会出现 0 场次的实体（它的比赛全部因参与人数不足被判无效）。
+    # 它们产生不了 z，也会让 sqrt(1/12/n) 除零 —— 从零世界重采样中剔除。
+    ns = np.asarray([int(n) for n in n_per_entity if int(n) >= 1])
+    if ns.size == 0:
         return 0.0
-    ns = np.asarray(n_per_entity)
     maxes = np.empty(B)
     for b in range(B):
         zs = np.array([
